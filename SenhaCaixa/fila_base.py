@@ -35,10 +35,6 @@ class FilaBase(metaclass= abc.ABCMeta):
         ...
 
     @abc.abstractmethod
-    def estatistica(self, dia, agencia, flag_detail):
-        ...
-
-    @abc.abstractmethod
-    def atualiza_fila(self):
+    def gera_senha_atual(self):
         ...
     
