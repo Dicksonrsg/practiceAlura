@@ -1,4 +1,4 @@
-from exceptions import SaldoInsuficienteError
+from exceptions import SaldoInsuficienteError, OperacaoFinanceiraError
 
 class Cliente:
     def __init__(self, nome, cpf, profissao):
@@ -16,6 +16,9 @@ class ContaCorrente:
         self.__agencia = 0
         self.__numero = 0
         
+        self.saques_nao_permitidos = 0
+        self.transferencias_nao_permitidas = 0
+
         self.cliente = cliente
         self.__set_agencia(agencia)
         self.__set_numero(numero)
@@ -30,7 +33,7 @@ class ContaCorrente:
         if not isinstance(value, int):
             raise ValueError("O atributo agencia deve ser um inteiro", value)
         if value <= 0:
-            raise ValueError("O atributo agencia deve ser maior que zero", value)
+            raise ValueError("O atributo agencia deve ser maior que zero")
 
         self.__agencia = value
 
@@ -40,9 +43,9 @@ class ContaCorrente:
 
     def __set_numero(self, value):
         if not isinstance(value, int):
-            raise ValueError("O atributo numero deve ser um inteiro", value)
+            raise ValueError("O atributo numero deve ser um inteiro")
         if value <= 0:
-            raise ValueError("O atributo numero deve ser maior que zero", value)
+            raise ValueError("O atributo numero deve ser maior que zero")
 
         self.__numero = value
 
@@ -53,21 +56,27 @@ class ContaCorrente:
     @saldo.setter
     def saldo(self, value):
         if not isinstance(value, int):
-            raise ValueError("O atributo saldo deve ser um inteiro", value)
+            raise ValueError("O atributo saldo deve ser um inteiro")
 
         self.__saldo = value        
 
     def transferir(self, valor, favorecido):
         if valor < 0:
             raise ValueError("O valor a ser depositado não pode ser menor que zero")
-        
-        self.sacar(valor)
+        try:
+            self.sacar(valor)
+        except SaldoInsuficienteError as e:
+            self.transferencias_nao_permitidas += 1
+            e.args = ()
+            raise OperacaoFinanceiraError("Operacao nao finalizada") from e
+
         favorecido.depositar(valor)
 
     def sacar(self, valor):
         if valor < 0:
             raise ValueError("O valor a ser sacado não pode ser menor que zero")
         if self.saldo < valor:
+            self.saques_nao_permitidos +=1
             raise SaldoInsuficienteError("", saldo=self.saldo, valor=valor)
 
         self.saldo -= valor
@@ -90,9 +99,6 @@ def main():
             cliente = Cliente(nome, None, None)
             conta_corrente = ContaCorrente(cliente, agencia, numero)
             contas.append(conta_corrente)
-        except ValueError as e:
-            print(type(e.args[1]))
-            sys.exit()
         except KeyboardInterrupt:
             print(f"\n\n {len(contas)} conta(s) criadas")
             sys.exit()
@@ -103,7 +109,10 @@ def main():
 
 conta_corrente1 = ContaCorrente(None, 400, 1234567)
 conta_corrente2 = ContaCorrente(None, 401, 1234568)
-
-conta_corrente1.transferir(110, conta_corrente2)
-print("Conta Corrente1 Saldo: ",conta_corrente1.saldo)
-print("Conta Corrente2 Saldo: ",conta_corrente2 .saldo)
+try:
+    conta_corrente1.transferir(110, conta_corrente2)
+    print("Conta Corrente1 Saldo: ",conta_corrente1.saldo)
+    print("Conta Corrente2 Saldo: ",conta_corrente2 .saldo)
+except OperacaoFinanceiraError as e:
+    breakpoint()
+    pass
